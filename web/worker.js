@@ -11,7 +11,10 @@
 //   GET /api/check?url → { url, score, blocked[], allowed[], notSpecified[], … }
 //   GET /bots, /api/bots, /bots/:id → the curated bot list
 // Asset routes:
-//   GET /og.png  /favicon.svg
+//   GET /og.png
+//   GET /favicon.png  /favicon.ico  /favicon.svg (old path)  /apple-touch-icon.png
+//       → GeoSuite's official favicon, always the PNG
+//   GET /logos/{chatgpt,gemini,perplexity}.svg → engine logos for the closing CTA
 //
 // We import from ../src/analyze.js (the pure, dependency-free core) — NOT the
 // package index — so the bundle never pulls in any `node:*` module or
@@ -22,9 +25,18 @@ import { analyzeRobots } from '../src/analyze.js';
 import bots from '../bots.json';
 import { renderPage } from './page.js';
 import OG_PNG from './og.png'; // bundled as ArrayBuffer via the wrangler "Data" rule
+// GeoSuite's official favicon (96px) and touch icon (180px): never redrawn.
+import FAVICON_PNG from './favicon.png';
+import TOUCH_ICON_PNG from './apple-touch-icon.png';
+// The AI engines' logos shown in the closing CTA (theme.js ENGINES), copied from
+// geo-toolkit/logos; bundled as text via the wrangler "Text" rule.
+import LOGO_CHATGPT from './logos/chatgpt.svg';
+import LOGO_GEMINI from './logos/gemini.svg';
+import LOGO_PERPLEXITY from './logos/perplexity.svg';
 
-// A geo "location pin" mark in the GeoSuite accent — inline SVG, no binary.
-const FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b0f17"/><path d="M32 13c-8.3 0-15 6.4-15 14.6C17 38 32 51 32 51s15-13 15-23.4C47 19.4 40.3 13 32 13z" fill="#5b8def"/><circle cx="32" cy="27.5" r="5.6" fill="#0b0f17"/></svg>`;
+const ENGINE_LOGOS = { chatgpt: LOGO_CHATGPT, gemini: LOGO_GEMINI, perplexity: LOGO_PERPLEXITY };
+const FAVICON_PATHS = new Set(['/favicon.png', '/favicon.ico', '/favicon.svg']);
+const ASSET_CACHE = 'public, max-age=86400';
 
 // '/it' → 'it', '/en' → 'en', '/' → first Accept-Language tag (it → 'it', else 'en').
 function pickLang(request, path) {
@@ -109,9 +121,16 @@ export default {
         headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' },
       });
     }
-    if (url.pathname === '/favicon.svg') {
-      return new Response(FAVICON, {
-        headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=86400' },
+    if (FAVICON_PATHS.has(url.pathname)) {
+      return new Response(FAVICON_PNG, { headers: { 'content-type': 'image/png', 'cache-control': ASSET_CACHE } });
+    }
+    if (url.pathname === '/apple-touch-icon.png') {
+      return new Response(TOUCH_ICON_PNG, { headers: { 'content-type': 'image/png', 'cache-control': ASSET_CACHE } });
+    }
+    const logo = url.pathname.match(/^\/logos\/(chatgpt|gemini|perplexity)\.svg$/);
+    if (logo) {
+      return new Response(ENGINE_LOGOS[logo[1]], {
+        headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': ASSET_CACHE },
       });
     }
 

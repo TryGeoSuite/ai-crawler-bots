@@ -6,7 +6,9 @@ A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that puts
 CLI (`analyzeRobots()` + the bundled `bots.json`) — just reachable from a browser.
 
 - `GET /` — the page (`page.js`), bilingual **en/it** (auto-detected from `Accept-Language`; `/en` · `/it` force a locale)
-- `GET /og.png` · `GET /favicon.svg` — Open Graph share image (1200×630) + favicon
+- `GET /og.png`: Open Graph share image (1200×630)
+- `GET /favicon.png` · `GET /apple-touch-icon.png`: GeoSuite's favicon and touch icon (`/favicon.ico` and the old `/favicon.svg` path serve the same PNG)
+- `GET /logos/<engine>.svg`: the AI engines' logos shown in the closing call to action
 - `GET /api/check?url=https://example.com` — JSON verdict
 - `GET /bots` — the full curated bot list as JSON; `GET /bots/<id>` — a single bot (a free public API over `bots.json`)
 
