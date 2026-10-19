@@ -7,7 +7,18 @@
 import { createInterface } from 'node:readline';
 import { createReadStream } from 'node:fs';
 import { createGunzip } from 'node:zlib';
-import { loadBots, getBot, testBot, testAllBots, checkRobots, evaluateGate, createLogAnalyzer, analyzeReferrers } from '../src/index.js';
+import {
+  loadBots,
+  getBot,
+  testBot,
+  testAllBots,
+  checkRobots,
+  evaluateGate,
+  isAnswerBot,
+  advisoryText,
+  createLogAnalyzer,
+  analyzeReferrers,
+} from '../src/index.js';
 import { chat, detectProvider } from '../src/ai.js';
 
 const [, , command, ...rest] = process.argv;
@@ -213,7 +224,9 @@ async function cmdRobots(positional, flags) {
   }
 
   process.stdout.write(`Fetched ${result.robotsUrl}  (HTTP ${result.fetchStatus})\n`);
-  process.stdout.write(`AI visibility score: ${result.score}/100\n\n`);
+  process.stdout.write(`AI visibility score: ${result.score}/100\n`);
+  if (result.advisory) process.stdout.write(`Next step: ${advisoryText(result.advisory)}\n`);
+  process.stdout.write('\n');
 
   if (result.managedBlock) {
     process.stdout.write(`Managed section: ${result.managedBlock.section}\n`);
@@ -258,6 +271,11 @@ async function cmdRobots(positional, flags) {
       process.stdout.write(`  ${pad(sig.userAgents.join(','), 16)}  ${pairs}\n`);
     }
     process.stdout.write('\n');
+  }
+
+  if (result.suggestedAllowlist) {
+    process.stdout.write('Fix snippet: put it above the group that blocks these bots (the first group naming a bot wins)\n');
+    process.stdout.write(result.suggestedAllowlist.trimEnd().replace(/^/gm, '  ') + '\n\n');
   }
 
   if (flags.ai) {
@@ -412,7 +430,8 @@ function diffResults(prev, next) {
 async function aiSummariseRobots(result) {
   const compact = {
     score: result.score,
-    blocked: result.blockedBots.map((e) => e.bot.name),
+    blocked_answer_bots: result.blockedBots.filter((e) => isAnswerBot(e.bot)).map((e) => e.bot.name),
+    blocked_training_bots: result.blockedBots.filter((e) => !isAnswerBot(e.bot)).map((e) => e.bot.name),
     allowed: result.allowedBots.map((e) => e.bot.name),
     not_specified: result.notSpecifiedBots.map((e) => e.bot.name),
     managed_block: result.managedBlock
@@ -429,7 +448,7 @@ async function aiSummariseRobots(result) {
       {
         role: 'system',
         content:
-          'You translate robots.txt verdicts for AI crawlers into a short plain-language summary for site owners. Keep it under 120 words, use plain language, no jargon, no markdown. Lead with whether the major AI bots (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) can read the site or not. Mention any managed-section override. End with the single most important next step.',
+          'You translate robots.txt verdicts for AI crawlers into a short plain-language summary for site owners. Keep it under 120 words, use plain language, no jargon, no markdown. Lead with whether the AI answer bots (search and on-demand fetchers) can read the site: they are the ones that cite pages, and blocking them costs AI visibility. Blocked training bots are a legitimate choice to protect data, not an error: never ask to unblock them. Mention any managed-section override. End with the single most important next step.',
       },
       {
         role: 'user',

@@ -9,7 +9,7 @@ CLI (`analyzeRobots()` + the bundled `bots.json`) — just reachable from a brow
 - `GET /og.png`: Open Graph share image (1200×630)
 - `GET /favicon.png` · `GET /apple-touch-icon.png`: GeoSuite's favicon and touch icon (`/favicon.ico` and the old `/favicon.svg` path serve the same PNG)
 - `GET /logos/<engine>.svg`: the AI engines' logos shown in the closing call to action
-- `GET /api/check?url=https://example.com` — JSON verdict
+- `GET /api/check?url=https://example.com`: JSON verdict, with score, bots by bucket, `advisory` (`{ key, params }`) and `suggestedAllowlist` (the lines that re-open the blocked answer bots)
 - `GET /bots` — the full curated bot list as JSON; `GET /bots/<id>` — a single bot (a free public API over `bots.json`)
 
 No database, no secrets, no tracking. It fetches only the target's `/robots.txt`.
@@ -37,7 +37,7 @@ custom domain instead, uncomment the `routes` block in [`wrangler.toml`](./wrang
 
 [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml) redeploys
 this Worker on every push to `main` that touches `web/`, `src/analyze.js`,
-or `bots.json`. Add two repo secrets (Settings → Secrets and variables → Actions):
+`src/messages.js` or `bots.json`. Add two repo secrets (Settings → Secrets and variables → Actions):
 
 - `CLOUDFLARE_API_TOKEN` — a token scoped **Edit Cloudflare Workers** from the
   Cloudflare account that owns the Worker.

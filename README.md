@@ -62,6 +62,8 @@ This repo aims to be the boring-but-correct version: every entry has a documenta
 | ClaudeBot | Anthropic | Training | Disallow (unless opting in) |
 | anthropic-ai | Anthropic | Training (deprecated) | Disallow (legacy) |
 | Claude-Web | Anthropic | Training (deprecated) | Disallow (legacy) |
+| Claude-SearchBot | Anthropic | Search index | Allow (so Claude can cite you when it searches the web) |
+| Claude-User | Anthropic | User-agent (on-demand) | Allow |
 | PerplexityBot | Perplexity | Search index | Allow |
 | Perplexity-User | Perplexity | User-agent (on-demand) | Allow |
 | Google-Extended | Google | Training (policy token) | Allow or Disallow — does not affect Search |
@@ -116,7 +118,7 @@ const result = await testBot('https://www.example.com', 'gptbot');
 console.log(result.status, result.blocked);
 ```
 
-Other exports: `checkRobots(url)` (fetch + audit a site's robots.txt), `analyzeRobots({ origin, status, body, bots })` (the same audit on an already-fetched body — pure, no I/O, so it runs in edge runtimes like Cloudflare Workers), and `evaluateGate(result, gate)` (the CI-gate logic behind `--fail-under` / `--assert-*`). Plus `parseRobots`, `verdictForBot`, `loadSources`, `analyzeReferrers`, and `createLogAnalyzer`.
+Other exports: `checkRobots(url)` (fetch + audit a site's robots.txt), `analyzeRobots({ origin, status, body, bots })` (the same audit on an already-fetched body: pure, no I/O, so it runs in edge runtimes like Cloudflare Workers), and `evaluateGate(result, gate)` (the CI-gate logic behind `--fail-under` / `--assert-*`). Plus `parseRobots`, `verdictForBot`, `isAnswerBot`, `allowlistSnippet`, `buildAdvisory`, `advisoryText`, `loadSources`, `analyzeReferrers`, and `createLogAnalyzer`.
 
 The library has zero runtime dependencies — it uses only `node:fs`, `node:http`, `node:https`, `node:url`, and `node:path`. Node 20 or newer.
 
@@ -223,6 +225,12 @@ The `robots` command surfaces what `check` cannot:
 - **Managed-section detection**: when a CDN injects a block (e.g. `# BEGIN Cloudflare Managed content` … `# END Cloudflare Managed Content`), the report tells you the section won over your own rules — typical Cloudflare AI Crawl Control footprint.
 - **Intentional gating**: `Disallow:` rules pointing at recognized private surfaces (`/admin`, `/auth`, `/cart`, …) are surfaced as positive signals — they don't penalize the score.
 - **Content-Signal**: parsed and reported per group, when present.
+- **Answer bots vs training bots**: the next step (`advisory` in `--json`) follows each bot's `purpose`. A blocked *answer* bot (`search`, `user-agent`) cannot cite you, so it is the problem to fix; a blocked *training* bot is a legitimate choice for proprietary data and is never graded as an error. Keeping training bots out of some paths only (`Disallow: /data/`) is called out as a good setup.
+- **Fix snippet**: the `User-agent` / `Allow: /` lines that let the blocked answer bots back in (`suggestedAllowlist` in `--json`). Training bots are never pushed back open.
+
+The score itself is unchanged: the share of the five top AI crawlers (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) not blocked from `/`, training bots included, so results stay comparable over time.
+
+**Same verdict as GeoSuite.** The [GeoSuite](https://trygeosuite.it) platform runs this analysis in Python. [`test/fixtures/robots-golden.json`](test/fixtures/robots-golden.json) lists robots.txt files with the expected per-bot verdicts, score, advisory and snippet bots; this repo's tests and GeoSuite's run the same file, so the two engines cannot drift apart unnoticed.
 
 ### `logs <file>`
 

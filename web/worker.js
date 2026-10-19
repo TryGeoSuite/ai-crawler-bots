@@ -8,7 +8,8 @@
 //   GET /     → locale picked from Accept-Language (it → Italian, else English)
 //   GET /en   → English   |   GET /it → Italian
 // API routes:
-//   GET /api/check?url → { url, score, blocked[], allowed[], notSpecified[], … }
+//   GET /api/check?url → { url, score, blocked[], allowed[], notSpecified[],
+//                          advisory {key, params}, suggestedAllowlist, … }
 //   GET /bots, /api/bots, /bots/:id → the curated bot list
 // Asset routes:
 //   GET /og.png
@@ -101,6 +102,8 @@ async function check(rawUrl) {
     allowed: r.allowedBots.map(compactBot),
     notSpecified: r.notSpecifiedBots.map(compactBot),
     managedBlock: r.managedBlock,
+    advisory: r.advisory,
+    suggestedAllowlist: r.suggestedAllowlist,
     error: r.error,
   };
 }

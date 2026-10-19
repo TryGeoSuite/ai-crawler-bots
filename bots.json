@@ -66,6 +66,28 @@
     "notes": "Deprecated identifier. Listed for completeness because many robots.txt files in the wild still reference it."
   },
   {
+    "id": "claude-searchbot",
+    "name": "Claude-SearchBot",
+    "ua": "Claude-SearchBot",
+    "uaToken": "Claude-SearchBot",
+    "owner": "Anthropic",
+    "purpose": "search",
+    "docsUrl": "https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler",
+    "robotsDirective": "Allow",
+    "notes": "Indexes pages to improve the results Claude returns when it searches the web. Allow to stay citable in Claude answers."
+  },
+  {
+    "id": "claude-user",
+    "name": "Claude-User",
+    "ua": "Claude-User",
+    "uaToken": "Claude-User",
+    "owner": "Anthropic",
+    "purpose": "user-agent",
+    "docsUrl": "https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler",
+    "robotsDirective": "Allow",
+    "notes": "On-demand fetcher when a Claude user asks a question that needs a specific page. Allow to surface as a cited source."
+  },
+  {
     "id": "perplexitybot",
     "name": "PerplexityBot",
     "ua": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)",

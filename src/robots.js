@@ -15,11 +15,21 @@ import {
   parseRobots,
   verdictForBot,
   intentionalGating,
+  trainingBotsGated,
+  isAnswerBot,
+  allowlistSnippet,
+  buildAdvisory,
   analyzeRobots,
   evaluateGate,
+  TOP_AI_BOTS,
+  TRAINING_PURPOSE,
 } from './analyze.js';
 
-function fetchRobotsTxt(robotsUrl, timeoutMs) {
+// Same ceiling as GeoSuite's fetcher (httpx's default): a redirect loop ends as
+// a fetch error instead of running forever.
+const MAX_REDIRECTS = 20;
+
+function fetchRobotsTxt(robotsUrl, timeoutMs, redirects = 0) {
   let parsed;
   try {
     parsed = new URL(robotsUrl);
@@ -45,11 +55,15 @@ function fetchRobotsTxt(robotsUrl, timeoutMs) {
         },
       },
       (res) => {
-        // Follow one level of redirect manually so we don't need a deps.
+        // Follow redirects by hand (no deps), up to MAX_REDIRECTS hops.
         if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
           res.resume();
+          if (redirects >= MAX_REDIRECTS) {
+            resolve({ status: 0, body: '', error: `Too many redirects (over ${MAX_REDIRECTS})` });
+            return;
+          }
           const next = new URL(res.headers.location, robotsUrl).toString();
-          fetchRobotsTxt(next, timeoutMs).then(resolve);
+          fetchRobotsTxt(next, timeoutMs, redirects + 1).then(resolve);
           return;
         }
         const chunks = [];
@@ -111,6 +125,8 @@ export async function checkRobots(url, opts = {}) {
       allowedBots: [],
       notSpecifiedBots: [],
       score: 0,
+      suggestedAllowlist: '',
+      advisory: null,
       intentionalGating: [],
       managedBlock: null,
       contentSignals: [],
@@ -127,4 +143,16 @@ export async function checkRobots(url, opts = {}) {
 
 // Re-export the pure API so `from './robots.js'` keeps working for callers and
 // tests that imported these before the analyze.js split.
-export { parseRobots, verdictForBot, intentionalGating, analyzeRobots, evaluateGate };
+export {
+  parseRobots,
+  verdictForBot,
+  intentionalGating,
+  trainingBotsGated,
+  isAnswerBot,
+  allowlistSnippet,
+  buildAdvisory,
+  analyzeRobots,
+  evaluateGate,
+  TOP_AI_BOTS,
+  TRAINING_PURPOSE,
+};

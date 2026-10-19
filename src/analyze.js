@@ -7,14 +7,29 @@
 //
 // Keep this file dependency-free: if you reach for `node:`, it belongs in
 // robots.js (the Node fetch layer), not here.
+//
+// GeoSuite runs the same analysis in Python. The two must always give the same
+// verdict, so every case in test/fixtures/robots-golden.json (robots.txt in,
+// per-bot verdicts, score, advisory and snippet bots out) runs in this repo's
+// tests and, from a copy, in GeoSuite's: change the behavior here, change the
+// fixture, and the Python side fails until it follows.
 
-const TOP_AI_BOTS = [
+// The score formula: share of these five not blocked from `/`. It counts the
+// training bots in the list too, so results stay comparable over time; what
+// the advisory says follows each bot's `purpose` instead.
+export const TOP_AI_BOTS = [
   'GPTBot',
   'ClaudeBot',
   'PerplexityBot',
   'OAI-SearchBot',
   'Google-Extended',
 ];
+
+// A bot whose `purpose` is `training` puts pages into model weights: blocking it
+// is the site's choice (proprietary data, price lists) and never an error. Every
+// other bot (`search`, `user-agent`) fetches pages to cite them in AI answers,
+// so blocking it costs AI visibility.
+export const TRAINING_PURPOSE = 'training';
 
 // Section markers recognized inside robots.txt comments.
 // Each entry: [startRegex, endRegex, label].
@@ -52,6 +67,27 @@ const PRIVATE_SURFACE_PATTERNS = [
   ['/orders', 'checkout'],
 ];
 
+// Line breaks, the same set Python's `str.splitlines()` splits on, so a file
+// saved with old Mac `\r` endings parses the same here and in GeoSuite.
+const LINE_BREAK = /\r\n|[\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029]/;
+
+/**
+ * Percent-decode like Python's `urllib.parse.unquote`: runs of `%XX` become
+ * UTF-8 (invalid bytes turn into U+FFFD) and a malformed escape stays as it is,
+ * instead of throwing like `decodeURIComponent` does.
+ *
+ * @param {string} s
+ * @returns {string}
+ */
+function unquote(s) {
+  if (!s.includes('%')) return s;
+  return s.replace(/(?:%[0-9a-fA-F]{2})+/g, (run) => {
+    const bytes = new Uint8Array(run.length / 3);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(run.slice(i * 3 + 1, i * 3 + 3), 16);
+    return new TextDecoder('utf-8').decode(bytes);
+  });
+}
+
 /**
  * Parse a Content-Signal value: `search=yes,ai-train=no` →
  * `{ search: 'yes', 'ai-train': 'no' }`.
@@ -83,7 +119,7 @@ export function parseRobots(raw) {
   let currentSection = null;
   let lastWasDirective = false;
 
-  const lines = raw.split(/\r?\n/);
+  const lines = raw.split(LINE_BREAK);
   for (let idx = 0; idx < lines.length; idx++) {
     const lineNumber = idx + 1;
     const rawLine = lines[idx];
@@ -143,7 +179,9 @@ export function parseRobots(raw) {
       lastWasDirective = true;
     } else if (key === 'content-signal') {
       if (!current) continue;
-      current.contentSignal = parseContentSignal(value);
+      // A value with no `key=value` pair declares nothing: treat it as absent.
+      const signal = parseContentSignal(value);
+      current.contentSignal = Object.keys(signal).length ? signal : null;
       current.contentSignalLine = lineNumber;
     }
     // Other directives (Sitemap, Crawl-delay, Host, …) are ignored for
@@ -162,8 +200,8 @@ export function parseRobots(raw) {
  */
 function pathMatches(pattern, path) {
   if (pattern === '') return false;
-  const decodedPattern = decodeURIComponent(pattern);
-  const decodedPath = decodeURIComponent(path);
+  const decodedPattern = unquote(pattern);
+  const decodedPath = unquote(path);
   const endAnchored = decodedPattern.endsWith('$');
   const body = endAnchored ? decodedPattern.slice(0, -1) : decodedPattern;
   const escaped = body
@@ -321,6 +359,104 @@ export function intentionalGating(groups) {
 }
 
 /**
+ * True for a bot that fetches pages to cite them in AI answers: every bot the
+ * dataset does not mark as `training` (a bot with no purpose counts too, so an
+ * unknown block keeps being reported instead of silently excused).
+ *
+ * @param {{ purpose?: string }} bot
+ * @returns {boolean}
+ */
+export function isAnswerBot(bot) {
+  return (bot && bot.purpose) !== TRAINING_PURPOSE;
+}
+
+/**
+ * The robots.txt lines that let the blocked answer bots back in. Training bots
+ * are never pushed back open: keeping them out costs no citations. Empty string
+ * when no answer bot is blocked.
+ *
+ * @param {Array<BotVerdict>} blocked
+ * @returns {string}
+ */
+export function allowlistSnippet(blocked) {
+  const toAllow = blocked.filter((e) => isAnswerBot(e.bot));
+  if (!toAllow.length) return '';
+  const lines = ['# ai-crawler-bots: let AI answer bots read and cite you (training bots stay as you set them)'];
+  for (const e of toAllow) lines.push('', `User-agent: ${e.bot.name}`, 'Allow: /');
+  return lines.join('\n') + '\n';
+}
+
+/**
+ * Training bots that a group naming them keeps out of some paths only (the
+ * selective block that protects proprietary data). Only groups naming the bot
+ * count, not `*`, and only path rules: `Disallow: /` is a site-wide block,
+ * which the verdict already reports.
+ *
+ * @param {Array<Group>} groups
+ * @param {Array<Object>} bots
+ * @returns {Array<string>} bot names, in dataset order
+ */
+export function trainingBotsGated(groups, bots) {
+  const out = [];
+  for (const bot of bots) {
+    if (!bot.name || bot.purpose !== TRAINING_PURPOSE) continue;
+    const { specific } = matchingGroups(groups, bot.name);
+    const gated = specific.some((g) =>
+      g.directives.some((d) => d.directive === 'disallow' && d.value !== '' && d.value !== '/'),
+    );
+    if (gated) out.push(bot.name);
+  }
+  return out;
+}
+
+/**
+ * The single next step that fits what the file does, as a stable key plus its
+ * parameters (the UI owns the wording). Blocked answer bots are the problem;
+ * blocked training bots alone are the site's call and get a neutral note.
+ *
+ * Keys, first match wins: `managed_overrides_user_intent`,
+ * `managed_block_detected`, `answer_bots_blocked`, `training_bots_blocked`,
+ * `training_bots_gated`, `fully_open_with_gating`, `fully_open`.
+ *
+ * @param {{ blocked: Array<BotVerdict>, managedBlock: Object|null, intentionalGating: Array<Object>, trainingGated: Array<string> }} args
+ * @returns {{ key: string, params: Record<string, string|number> }}
+ */
+export function buildAdvisory({ blocked, managedBlock, intentionalGating: gating, trainingGated }) {
+  if (managedBlock && managedBlock.userWouldAllow.length) {
+    return {
+      key: 'managed_overrides_user_intent',
+      params: { section: managedBlock.section, bots: managedBlock.userWouldAllow.join(', ') },
+    };
+  }
+  if (managedBlock) {
+    return {
+      key: 'managed_block_detected',
+      params: { section: managedBlock.section, bots: managedBlock.blockedBotNames.join(', ') },
+    };
+  }
+  const blockedAnswer = blocked.filter((e) => isAnswerBot(e.bot));
+  if (blockedAnswer.length) {
+    return {
+      key: 'answer_bots_blocked',
+      params: { count: blockedAnswer.length, bots: blockedAnswer.map((e) => e.bot.name).join(', ') },
+    };
+  }
+  if (blocked.length) {
+    return {
+      key: 'training_bots_blocked',
+      params: { count: blocked.length, bots: blocked.map((e) => e.bot.name).join(', ') },
+    };
+  }
+  if (trainingGated.length) {
+    return { key: 'training_bots_gated', params: { bots: trainingGated.join(', ') } };
+  }
+  if (gating.length) {
+    return { key: 'fully_open_with_gating', params: { count: gating.length } };
+  }
+  return { key: 'fully_open', params: {} };
+}
+
+/**
  * The pure analysis half of `checkRobots`: given an already-fetched robots.txt
  * body (plus the bot list), compute the per-bot verdict object — no network, no
  * filesystem. `checkRobots()` = fetch + loadBots + analyzeRobots.
@@ -393,6 +529,13 @@ export function analyzeRobots({ origin, robotsUrl = '', status = 0, body = '', b
       sourceLabel: g.sourceLabel,
     }));
 
+  const advisory = buildAdvisory({
+    blocked,
+    managedBlock,
+    intentionalGating: gating,
+    trainingGated: trainingBotsGated(groups, bots),
+  });
+
   return {
     url: origin,
     robotsUrl,
@@ -402,6 +545,8 @@ export function analyzeRobots({ origin, robotsUrl = '', status = 0, body = '', b
     allowedBots: allowed,
     notSpecifiedBots: notSpecified,
     score,
+    suggestedAllowlist: allowlistSnippet(blocked),
+    advisory,
     intentionalGating: gating,
     managedBlock,
     contentSignals,
@@ -503,6 +648,8 @@ export function evaluateGate(result, gate = {}) {
  * @property {Array<BotVerdict>} allowedBots
  * @property {Array<BotVerdict>} notSpecifiedBots
  * @property {number} score
+ * @property {string} suggestedAllowlist robots.txt lines that re-open the blocked answer bots ('' when none)
+ * @property {{ key: string, params: Record<string, string|number> }} advisory the single next step, see buildAdvisory()
  * @property {Array<{ category: string, value: string, line: number }>} intentionalGating
  * @property {{ section: string, blockedBotNames: Array<string>, userWouldAllow: Array<string> } | null} managedBlock
  * @property {Array<{ userAgents: Array<string>, signals: Record<string, string>, line: number | null, sourceLabel: string | null }>} contentSignals
