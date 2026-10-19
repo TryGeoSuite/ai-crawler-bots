@@ -31,6 +31,8 @@ Thanks for helping keep `ai-crawler-bots` accurate. The whole value of this repo
 
    The smoke test enforces required fields, valid `purpose`/`robotsDirective` values, unique ids, unique UAs, and well-formed `docsUrl`s.
 
+   The golden test (`test/test-golden.js`) fails too, on purpose: a new bot changes verdicts. Add it to `dataset` in `test/fixtures/robots-golden.json` and to the cases that list every bot (the wildcard ones), then copy `bots.json` and the fixture to GeoSuite (see below).
+
 5. **Update the README table** if the bot is notable enough to surface in the top-level summary.
 
 6. **Update `CHANGELOG.md`** under the next unreleased version with a one-line entry: `- Added <BotName> (<owner>).`
@@ -46,6 +48,14 @@ Operators do change UA strings (GPTBot went 1.0 → 1.1, DuckAssistBot 1.1 → 1
 ## Removing a bot
 
 Remove a bot only if the operator has formally deprecated it AND the UA has been gone from server logs for several months. If it's just deprecated, leave it in with a `notes` entry that says so — robots.txt files in the wild still reference it for years.
+
+## Changing the robots analysis
+
+GeoSuite runs the same analysis in Python and must give the same verdict. The contract is `test/fixtures/robots-golden.json`: robots.txt in, per-bot verdicts, score, advisory key and params, snippet bots, gating, managed block and Content-Signal out.
+
+- A behavior change starts here: change `src/analyze.js`, add or update a golden case, run `npm test`.
+- Then copy `bots.json` to `backend/data/ai_crawler_bots.json` and the fixture to `backend/tests/fixtures/robots_golden.json` in GeoSuite. Its `tests/tools/test_robots_golden.py` fails until the Python engine follows.
+- Advisory wording lives in `src/messages.js` (English and Italian); the keys and their meaning are shared with GeoSuite, the wording is not.
 
 ## Code style
 

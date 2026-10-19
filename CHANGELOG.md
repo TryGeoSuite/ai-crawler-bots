@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Claude-SearchBot and Claude-User (Anthropic).
+- `robots` now separates **answer bots** from **training bots** by their `purpose`.
+  The result carries an `advisory` (`{ key, params }`: `answer_bots_blocked`,
+  `training_bots_blocked`, `training_bots_gated`, `managed_overrides_user_intent`,
+  `managed_block_detected`, `fully_open_with_gating`, `fully_open`) and a
+  `suggestedAllowlist` that re-opens the blocked answer bots only. Blocking a
+  training bot is a choice, never an error. The score formula is unchanged.
+- The CLI prints the next step and the fix snippet; the hosted checker shows them
+  too (English and Italian, `src/messages.js`), and a training-only block no
+  longer reads as a failure. `--ai` follows the same rule.
+- `test/fixtures/robots-golden.json`: golden cases shared with GeoSuite's Python
+  engine, so the two always give the same verdict. New exports `isAnswerBot`,
+  `allowlistSnippet`, `buildAdvisory`, `trainingBotsGated`, `advisoryText`,
+  `ADVISORY_MESSAGES`, `TOP_AI_BOTS`, `TRAINING_PURPOSE`.
+
+### Fixed
+
+- A malformed percent escape in a rule (`Disallow: /%E0%A4%A`) no longer throws.
+- Files with old Mac line endings (`\r` only) are parsed line by line.
+- An empty `Content-Signal:` value is treated as absent instead of as an empty signal.
+- `robots` stops after 20 redirects instead of following a redirect loop forever.
+
 ## [0.6.0] - 2026-06-23
 
 ### Added

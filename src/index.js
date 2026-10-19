@@ -204,7 +204,21 @@ function detectEdgeProvider(headers) {
   return null;
 }
 
-export { checkRobots, analyzeRobots, evaluateGate, parseRobots, verdictForBot, intentionalGating } from './robots.js';
+export {
+  checkRobots,
+  analyzeRobots,
+  evaluateGate,
+  parseRobots,
+  verdictForBot,
+  intentionalGating,
+  trainingBotsGated,
+  isAnswerBot,
+  allowlistSnippet,
+  buildAdvisory,
+  TOP_AI_BOTS,
+  TRAINING_PURPOSE,
+} from './robots.js';
+export { advisoryText, ADVISORY_MESSAGES } from './messages.js';
 export { createLogAnalyzer, analyzeLogText, parseLogLine, matchBot } from './logs.js';
 export {
   loadSources,

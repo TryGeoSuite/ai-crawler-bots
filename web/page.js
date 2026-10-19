@@ -10,6 +10,7 @@
 // Inter font from Google Fonts, and the engine logos come from this worker.
 
 import { FONTS, BASE_CSS, ENGINES } from './theme.js';
+import { ADVISORY_MESSAGES } from '../src/messages.js';
 
 const BASE = 'https://ai-crawl-check.geosuite.workers.dev';
 const HUB = 'https://tools.trygeosuite.it';
@@ -49,7 +50,7 @@ const S = {
       ['partial', 'Not set', 'no rule names this bot, so your general rules decide (with no file, it can read).'],
       ['missing', 'Blocked', 'your robots.txt keeps this bot out of the site.'],
     ],
-    legendScore: 'The score is the share of the five AI crawlers that matter most (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) that are not blocked.',
+    legendScore: 'The score is the share of the five AI crawlers that matter most (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) that are not blocked. Answer bots (search, user-agent) read pages to cite them: blocking them costs AI visibility. Training bots put pages into model weights: blocking them is your choice, never an error.',
     cliHead: 'The same check, from your terminal or CI',
     cliLead: 'It is also a zero-dependency CLI on npm, and a GitHub Action that fails the build when a robots.txt change shuts an AI crawler out.',
     cliAction: 'Set up the GitHub Action',
@@ -71,9 +72,9 @@ const S = {
       toneGood: 'The main AI crawlers can read your site',
       toneMid: 'Some of the main AI crawlers are kept out',
       toneLow: 'Most of the main AI crawlers are kept out',
-      managedPre: 'A managed section (<code>',
-      managedMid: '</code>) overrides your file and blocks: ',
-      managedPost: '.',
+      toneTraining: 'Only training bots are kept out: AI answers can still cite you',
+      snippetHead: 'Fix snippet',
+      snippetHint: 'Put it above the group that blocks these bots, or replace that group: the first group naming a bot wins. Training bots stay as you set them.',
       colBlocked: 'Blocked',
       colAllowed: 'Allowed',
       colNotSet: 'Not set',
@@ -101,7 +102,7 @@ const S = {
       ['partial', 'Non impostato', 'nessuna regola nomina questo bot, quindi decidono le tue regole generali (senza file, può leggere).'],
       ['missing', 'Bloccato', 'il tuo robots.txt tiene questo bot fuori dal sito.'],
     ],
-    legendScore: 'Il punteggio è la quota dei cinque crawler AI che contano di più (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) che non sono bloccati.',
+    legendScore: 'Il punteggio è la quota dei cinque crawler AI che contano di più (GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, Google-Extended) che non sono bloccati. I bot di risposta (search, user-agent) leggono le pagine per citarle: bloccarli costa visibilità sulle AI. I bot di addestramento mettono le pagine nei pesi dei modelli: bloccarli è una tua scelta, mai un errore.',
     cliHead: 'Lo stesso controllo, dal terminale o dalla CI',
     cliLead: 'È anche una CLI su npm senza dipendenze, e una GitHub Action che fa fallire la build quando una modifica al robots.txt chiude fuori un crawler AI.',
     cliAction: 'Configura la GitHub Action',
@@ -122,9 +123,9 @@ const S = {
       toneGood: 'I principali crawler AI possono leggere il tuo sito',
       toneMid: 'Alcuni dei principali crawler AI restano fuori',
       toneLow: 'Quasi tutti i principali crawler AI restano fuori',
-      managedPre: 'Una sezione gestita (<code>',
-      managedMid: '</code>) sovrascrive il tuo file e blocca: ',
-      managedPost: '.',
+      toneTraining: 'Restano fuori solo i bot di addestramento: le risposte AI possono ancora citarti',
+      snippetHead: 'Snippet di correzione',
+      snippetHint: 'Mettilo sopra il gruppo che blocca questi bot, o sostituisci quel gruppo: vince il primo gruppo che nomina un bot. I bot di addestramento restano come li hai impostati.',
       colBlocked: 'Bloccati',
       colAllowed: 'Permessi',
       colNotSet: 'Non impostati',
@@ -206,8 +207,17 @@ ${BASE_CSS}
   .verdict a { display:inline-block; margin-top:4px; font-size:.875rem; overflow-wrap:anywhere; text-decoration:none; }
   .verdict a:hover { text-decoration:underline; }
 
-  .warn { display:flex; gap:10px; align-items:flex-start; margin:0 0 16px; padding:12px 16px; border-radius:8px; background:var(--crit-soft); color:var(--ink); font-size:.9375rem; overflow-wrap:anywhere; }
-  .warn svg { width:20px; height:20px; flex:none; margin-top:1px; color:var(--crit); }
+  .advice { display:flex; gap:10px; align-items:flex-start; margin:0 0 16px; padding:12px 16px; border-radius:8px; color:var(--ink); font-size:.9375rem; overflow-wrap:anywhere; }
+  .advice svg { width:20px; height:20px; flex:none; margin-top:1px; }
+  .advice.good { background:var(--ok-soft); } .advice.info { background:var(--sunk); }
+  .advice.warn { background:var(--warn-soft); } .advice.warn svg { color:var(--warn); }
+
+  .snippet { margin:16px 0 0; }
+  .snippet h3 { font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin:0 0 6px; }
+  .snippet p { color:var(--ink-2); font-size:.875rem; margin:0 0 8px; }
+  .snippet .cmd { align-items:flex-start; margin:0; }
+  .snippet pre { flex:1; min-width:0; margin:0; padding:8px 0; overflow-x:auto; color:var(--ink-2); font-size:.875rem; }
+  .snippet pre code { white-space:pre; padding:0; overflow:visible; }
 
   .cols { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; }
   .col h3 { display:flex; align-items:center; gap:8px; font-size:.75rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3); margin:0 0 8px; }
@@ -297,7 +307,7 @@ ${BASE_CSS}
   <footer>${t.footer}</footer>
 </div>
 
-<script>var I18N = ${JSON.stringify(t.js)}; var ICONS = ${JSON.stringify(ICONS)}; var COPY = ${JSON.stringify({ copy: t.copy, copied: t.copied, label: t.copyLabel })};</script>
+<script>var I18N = ${JSON.stringify(t.js)}; var ADVICE = ${JSON.stringify(ADVISORY_MESSAGES[lang] || ADVISORY_MESSAGES.en)}; var ICONS = ${JSON.stringify(ICONS)}; var COPY = ${JSON.stringify({ copy: t.copy, copied: t.copied, label: t.copyLabel })};</script>
 <script>
   var out = document.getElementById('out');
   var input = document.getElementById('u');
@@ -306,8 +316,41 @@ ${BASE_CSS}
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
-  function tone(score){ return score >= 70 ? 'yes' : score >= 40 ? 'mid' : 'no'; }
-  function toneText(score){ return score >= 70 ? I18N.toneGood : score >= 40 ? I18N.toneMid : I18N.toneLow; }
+  // Same bands as GeoSuite: a block of training bots alone never reads as a
+  // failure, because AI answers can still cite the site.
+  function trainingOnly(r){
+    return r.blocked.length > 0 && r.blocked.every(function(b){ return b.purpose === 'training'; });
+  }
+  function tone(r){ return r.score >= 80 ? 'yes' : (r.score >= 50 || trainingOnly(r)) ? 'mid' : 'no'; }
+  function toneText(r){
+    if (trainingOnly(r)) return I18N.toneTraining;
+    return r.score >= 80 ? I18N.toneGood : r.score >= 50 ? I18N.toneMid : I18N.toneLow;
+  }
+
+  var ADVICE_TONE = { fully_open: 'good', fully_open_with_gating: 'good', training_bots_gated: 'good',
+    answer_bots_blocked: 'warn', managed_overrides_user_intent: 'warn' };
+  var ADVICE_ICON = { good: ['ok', ICONS.ok], warn: ['', ICONS.warn], info: ['partial', ICONS.partial] };
+  function advice(a){
+    var text = a && ADVICE[a.key];
+    if (!text) return '';
+    var params = a.params || {};
+    text = text.replace(/\\{(\\w+)\\}/g, function(m, k){ return k in params ? String(params[k]) : m; });
+    var t = ADVICE_TONE[a.key] || 'info';
+    return '<div class="advice ' + t + ' ' + ADVICE_ICON[t][0] + '">' + ADVICE_ICON[t][1] + '<span>' + esc(text) + '</span></div>';
+  }
+
+  function addCopy(box, text){
+    if (!navigator.clipboard) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'ghost'; b.textContent = COPY.copy; b.setAttribute('aria-label', COPY.label);
+    b.addEventListener('click', function () {
+      navigator.clipboard.writeText(text).then(function () {
+        b.textContent = COPY.copied;
+        setTimeout(function () { b.textContent = COPY.copy; }, 1200);
+      }).catch(function () {});
+    });
+    box.appendChild(b);
+  }
 
   function botRow(b){
     return '<li class="bot">' + esc(b.name) +
@@ -329,26 +372,28 @@ ${BASE_CSS}
       fail(I18N.checkFailed + esc(r.error));
       return;
     }
-    var warn = r.managedBlock ? '<div class="warn">' + ICONS.warn + '<span>' + I18N.managedPre +
-      esc(r.managedBlock.section) + I18N.managedMid +
-      esc(r.managedBlock.blockedBotNames.join(', ')) + I18N.managedPost + '</span></div>' : '';
+    var snippet = r.suggestedAllowlist ? '<div class="snippet"><h3>' + I18N.snippetHead + '</h3>' +
+      '<p>' + I18N.snippetHint + '</p><div class="cmd"><pre><code>' + esc(r.suggestedAllowlist) + '</code></pre></div></div>' : '';
     out.innerHTML =
       '<section class="panel result" aria-labelledby="score-head">' +
-        '<div class="verdict ' + tone(r.score) + '">' +
+        '<div class="verdict ' + tone(r) + '">' +
           '<div class="score">' + r.score + '<small>/100</small></div>' +
           '<div>' +
             '<p class="label" id="score-head">' + I18N.scoreHeading + '</p>' +
-            '<strong>' + toneText(r.score) + '</strong>' +
+            '<strong>' + toneText(r) + '</strong>' +
             '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.url) + '</a>' +
           '</div>' +
         '</div>' +
-        warn +
+        advice(r.advisory) +
         '<div class="cols">' +
           column(I18N.colBlocked, r.blocked, 'missing') +
           column(I18N.colAllowed, r.allowed, 'ok') +
           column(I18N.colNotSet, r.notSpecified, 'partial') +
         '</div>' +
+        snippet +
       '</section>';
+    var box = out.querySelector('.snippet .cmd');
+    if (box) addCopy(box, r.suggestedAllowlist);
   }
 
   function run(url){
@@ -373,20 +418,9 @@ ${BASE_CSS}
   if (shared){ input.value = shared; run(shared); }
 
   // A copy button on each command box, when the browser allows it.
-  if (navigator.clipboard) {
-    document.querySelectorAll('.cmd').forEach(function (box) {
-      var cmd = box.querySelector('code').textContent.trim();
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'ghost'; b.textContent = COPY.copy; b.setAttribute('aria-label', COPY.label);
-      b.addEventListener('click', function () {
-        navigator.clipboard.writeText(cmd).then(function () {
-          b.textContent = COPY.copied;
-          setTimeout(function () { b.textContent = COPY.copy; }, 1200);
-        }).catch(function () {});
-      });
-      box.appendChild(b);
-    });
-  }
+  document.querySelectorAll('.cmd').forEach(function (box) {
+    addCopy(box, box.querySelector('code').textContent.trim());
+  });
 </script>
 </body>
 </html>`;

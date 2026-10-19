@@ -1,0 +1,973 @@
+{
+  "about": "Golden cases for the robots.txt analysis. The same file runs in ai-crawler-bots (test/test-golden.js) and, as a copy, in GeoSuite (backend/tests/fixtures/robots_golden.json): both engines must give these results. `not_specified` is every bot of the dataset that is neither blocked nor allowed. `snippet_bots` are the User-agent lines of the suggested allowlist, in order. Change a behavior: change it in both engines and in both copies of this file.",
+  "top_bots": [
+    "GPTBot",
+    "ClaudeBot",
+    "PerplexityBot",
+    "OAI-SearchBot",
+    "Google-Extended"
+  ],
+  "dataset": [
+    [
+      "GPTBot",
+      "training"
+    ],
+    [
+      "ChatGPT-User",
+      "user-agent"
+    ],
+    [
+      "OAI-SearchBot",
+      "search"
+    ],
+    [
+      "ClaudeBot",
+      "training"
+    ],
+    [
+      "anthropic-ai",
+      "training"
+    ],
+    [
+      "Claude-Web",
+      "training"
+    ],
+    [
+      "Claude-SearchBot",
+      "search"
+    ],
+    [
+      "Claude-User",
+      "user-agent"
+    ],
+    [
+      "PerplexityBot",
+      "search"
+    ],
+    [
+      "Perplexity-User",
+      "user-agent"
+    ],
+    [
+      "Google-Extended",
+      "training"
+    ],
+    [
+      "Applebot-Extended",
+      "training"
+    ],
+    [
+      "Bytespider",
+      "training"
+    ],
+    [
+      "CCBot",
+      "training"
+    ],
+    [
+      "MistralAI-User",
+      "user-agent"
+    ],
+    [
+      "DuckAssistBot",
+      "user-agent"
+    ],
+    [
+      "Meta-ExternalAgent",
+      "training"
+    ],
+    [
+      "FacebookBot",
+      "training"
+    ],
+    [
+      "Amazonbot",
+      "search"
+    ],
+    [
+      "cohere-training-data-crawler",
+      "training"
+    ],
+    [
+      "Diffbot",
+      "training"
+    ],
+    [
+      "PetalBot",
+      "search"
+    ],
+    [
+      "YouBot",
+      "search"
+    ],
+    [
+      "Timpibot",
+      "search"
+    ],
+    [
+      "GoogleOther",
+      "training"
+    ],
+    [
+      "Omgilibot",
+      "training"
+    ]
+  ],
+  "cases": [
+    {
+      "name": "no robots.txt (404)",
+      "why": "No file means every bot may read: nothing is blocked or named.",
+      "status": 404,
+      "robots": "Not found",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "network error",
+      "status": 0,
+      "robots": "",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "server error with a body",
+      "why": "A 5xx body is not a robots.txt: it is ignored.",
+      "status": 500,
+      "robots": "User-agent: *\nDisallow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "empty file",
+      "status": 200,
+      "robots": "",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "wildcard allows everything",
+      "why": "A `*` group does not name any bot: they stay not specified.",
+      "status": 200,
+      "robots": "User-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "wildcard blocks everything",
+      "status": 200,
+      "robots": "User-agent: *\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ChatGPT-User",
+          "OAI-SearchBot",
+          "ClaudeBot",
+          "anthropic-ai",
+          "Claude-Web",
+          "Claude-SearchBot",
+          "Claude-User",
+          "PerplexityBot",
+          "Perplexity-User",
+          "Google-Extended",
+          "Applebot-Extended",
+          "Bytespider",
+          "CCBot",
+          "MistralAI-User",
+          "DuckAssistBot",
+          "Meta-ExternalAgent",
+          "FacebookBot",
+          "Amazonbot",
+          "cohere-training-data-crawler",
+          "Diffbot",
+          "PetalBot",
+          "YouBot",
+          "Timpibot",
+          "GoogleOther",
+          "Omgilibot"
+        ],
+        "allowed": [],
+        "score": 0,
+        "advisory": {
+          "key": "answer_bots_blocked",
+          "params": {
+            "count": 12,
+            "bots": "ChatGPT-User, OAI-SearchBot, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, MistralAI-User, DuckAssistBot, Amazonbot, PetalBot, YouBot, Timpibot"
+          }
+        },
+        "snippet_bots": [
+          "ChatGPT-User",
+          "OAI-SearchBot",
+          "Claude-SearchBot",
+          "Claude-User",
+          "PerplexityBot",
+          "Perplexity-User",
+          "MistralAI-User",
+          "DuckAssistBot",
+          "Amazonbot",
+          "PetalBot",
+          "YouBot",
+          "Timpibot"
+        ],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "training bots blocked site-wide",
+      "why": "The score formula still counts the three training bots of the top five; the advisory does not grade it as an error and the snippet re-opens nothing.",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow: /\n\nUser-agent: ClaudeBot\nDisallow: /\n\nUser-agent: Google-Extended\nDisallow: /\n\nUser-agent: CCBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ClaudeBot",
+          "Google-Extended",
+          "CCBot"
+        ],
+        "allowed": [],
+        "score": 40,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 4,
+            "bots": "GPTBot, ClaudeBot, Google-Extended, CCBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "answer bots blocked",
+      "why": "The snippet re-opens the answer bots only: GPTBot stays blocked.",
+      "status": 200,
+      "robots": "User-agent: OAI-SearchBot\nDisallow: /\n\nUser-agent: PerplexityBot\nDisallow: /\n\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: Claude-User\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "OAI-SearchBot",
+          "Claude-User",
+          "PerplexityBot"
+        ],
+        "allowed": [],
+        "score": 40,
+        "advisory": {
+          "key": "answer_bots_blocked",
+          "params": {
+            "count": 3,
+            "bots": "OAI-SearchBot, Claude-User, PerplexityBot"
+          }
+        },
+        "snippet_bots": [
+          "OAI-SearchBot",
+          "Claude-User",
+          "PerplexityBot"
+        ],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "answer bot outside the top five",
+      "why": "A full score and still an advisory: the score only looks at the top five.",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nAllow: /\n\nUser-agent: Claude-SearchBot\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "Claude-SearchBot"
+        ],
+        "allowed": [
+          "GPTBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "answer_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "Claude-SearchBot"
+          }
+        },
+        "snippet_bots": [
+          "Claude-SearchBot"
+        ],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "training bots kept out of some paths",
+      "why": "The selective block: answer bots read every page, training bots stay out of the data paths.",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nUser-agent: CCBot\nDisallow: /data/\nDisallow: /prices\n\nUser-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "GPTBot",
+          "CCBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "training_bots_gated",
+          "params": {
+            "bots": "GPTBot, CCBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "answer bot kept out of some paths is not a selective training block",
+      "status": 200,
+      "robots": "User-agent: OAI-SearchBot\nDisallow: /private/\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "OAI-SearchBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "selective training block wins over private-surface gating",
+      "status": 200,
+      "robots": "User-agent: *\nDisallow: /admin/\n\nUser-agent: GPTBot\nDisallow: /datasets/\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "GPTBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "training_bots_gated",
+          "params": {
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [
+          [
+            "admin",
+            "/admin/"
+          ]
+        ],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "root patterns that block the whole site",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow: /*\n\nUser-agent: ClaudeBot\nDisallow: /$\n\nUser-agent: CCBot\nDisallow: *\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ClaudeBot",
+          "CCBot"
+        ],
+        "allowed": [],
+        "score": 60,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 3,
+            "bots": "GPTBot, ClaudeBot, CCBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "Allow wins a tie",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow: /\nAllow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "GPTBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "longest match wins",
+      "status": 200,
+      "robots": "User-agent: PerplexityBot\nDisallow: /\nAllow: /*\n\nUser-agent: OAI-SearchBot\nAllow: /\nDisallow: /*\n",
+      "expected": {
+        "blocked": [
+          "OAI-SearchBot"
+        ],
+        "allowed": [
+          "PerplexityBot"
+        ],
+        "score": 80,
+        "advisory": {
+          "key": "answer_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "OAI-SearchBot"
+          }
+        },
+        "snippet_bots": [
+          "OAI-SearchBot"
+        ],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "empty Disallow blocks nothing",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow:\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "GPTBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "first group naming the bot wins",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow: /\n\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: ClaudeBot\nAllow: /\n\nUser-agent: ClaudeBot\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot"
+        ],
+        "allowed": [
+          "ClaudeBot"
+        ],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "a group naming the bot beats the wildcard",
+      "status": 200,
+      "robots": "User-agent: *\nDisallow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ChatGPT-User",
+          "ClaudeBot",
+          "anthropic-ai",
+          "Claude-Web",
+          "Claude-SearchBot",
+          "Claude-User",
+          "PerplexityBot",
+          "Perplexity-User",
+          "Applebot-Extended",
+          "Bytespider",
+          "CCBot",
+          "MistralAI-User",
+          "DuckAssistBot",
+          "Meta-ExternalAgent",
+          "FacebookBot",
+          "Amazonbot",
+          "cohere-training-data-crawler",
+          "Diffbot",
+          "PetalBot",
+          "YouBot",
+          "Timpibot",
+          "GoogleOther",
+          "Omgilibot"
+        ],
+        "allowed": [
+          "OAI-SearchBot",
+          "Google-Extended"
+        ],
+        "score": 40,
+        "advisory": {
+          "key": "answer_bots_blocked",
+          "params": {
+            "count": 11,
+            "bots": "ChatGPT-User, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, MistralAI-User, DuckAssistBot, Amazonbot, PetalBot, YouBot, Timpibot"
+          }
+        },
+        "snippet_bots": [
+          "ChatGPT-User",
+          "Claude-SearchBot",
+          "Claude-User",
+          "PerplexityBot",
+          "Perplexity-User",
+          "MistralAI-User",
+          "DuckAssistBot",
+          "Amazonbot",
+          "PetalBot",
+          "YouBot",
+          "Timpibot"
+        ],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "user-agent tokens match whole and ignore case",
+      "why": "`Claude` and `PerplexityBot/1.0` name no known bot: only the exact token matches.",
+      "status": 200,
+      "robots": "user-agent: gptbot\ndisallow: /\n\nUser-agent: Claude\nDisallow: /\n\nUser-agent: PerplexityBot/1.0\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "several agents in one group, other lines in between",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nCrawl-delay: 10\nUser-agent: CCBot\nDisallow: /\nSitemap: https://x.test/sitemap.xml\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "CCBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 2,
+            "bots": "GPTBot, CCBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "rules before any User-agent are ignored",
+      "status": 200,
+      "robots": "Disallow: /\nAllow: /x\n\nUser-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "empty User-agent lines are skipped",
+      "status": 200,
+      "robots": "User-agent:\nDisallow: /\nUser-agent:   GPTBot   \nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "comments, CRLF and blank lines inside a group",
+      "status": 200,
+      "robots": "# robots for x.test\r\nUser-agent: GPTBot # training\r\n\r\nDisallow: / # all\r\n",
+      "expected": {
+        "blocked": [
+          "GPTBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "old Mac line endings",
+      "status": 200,
+      "robots": "User-agent: ClaudeBot\rDisallow: /\r",
+      "expected": {
+        "blocked": [
+          "ClaudeBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "ClaudeBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "a byte-order mark before the first line",
+      "why": "Files saved by some Windows editors start with a BOM. It is not part of the first directive, so the first group still counts.",
+      "status": 200,
+      "robots": "\ufeffUser-agent: GPTBot\nDisallow: /\n\nUser-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot"
+        ],
+        "allowed": [],
+        "score": 80,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 1,
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "percent escapes, valid and malformed",
+      "why": "A malformed escape must not crash the parser; `%2F` decodes to `/`.",
+      "status": 200,
+      "robots": "User-agent: GPTBot\nDisallow: /%E0%A4%A\nDisallow: /%zz\nDisallow: /\n\nUser-agent: ClaudeBot\nDisallow: %2F\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ClaudeBot"
+        ],
+        "allowed": [],
+        "score": 60,
+        "advisory": {
+          "key": "training_bots_blocked",
+          "params": {
+            "count": 2,
+            "bots": "GPTBot, ClaudeBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "a managed section overrides your file",
+      "status": 200,
+      "robots": "# BEGIN Cloudflare Managed content\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: ClaudeBot\nDisallow: /\n# END Cloudflare Managed Content\n\nUser-agent: GPTBot\nAllow: /\n\nUser-agent: *\nAllow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "ClaudeBot"
+        ],
+        "allowed": [],
+        "score": 60,
+        "advisory": {
+          "key": "managed_overrides_user_intent",
+          "params": {
+            "section": "cloudflare_managed_content",
+            "bots": "GPTBot, ClaudeBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": {
+          "section": "cloudflare_managed_content",
+          "blocked": [
+            "GPTBot",
+            "ClaudeBot"
+          ],
+          "user_would_allow": [
+            "GPTBot",
+            "ClaudeBot"
+          ]
+        },
+        "content_signals": []
+      }
+    },
+    {
+      "name": "a managed section your file agrees with",
+      "status": 200,
+      "robots": "# BEGIN Cloudflare Managed content\nUser-agent: GPTBot\nDisallow: /\n\nUser-agent: OAI-SearchBot\nDisallow: /\n# END Cloudflare Managed Content\n\nUser-agent: GPTBot\nUser-agent: OAI-SearchBot\nDisallow: /\n",
+      "expected": {
+        "blocked": [
+          "GPTBot",
+          "OAI-SearchBot"
+        ],
+        "allowed": [],
+        "score": 60,
+        "advisory": {
+          "key": "managed_block_detected",
+          "params": {
+            "section": "cloudflare_managed_content",
+            "bots": "GPTBot, OAI-SearchBot"
+          }
+        },
+        "snippet_bots": [
+          "OAI-SearchBot"
+        ],
+        "intentional_gating": [],
+        "managed_block": {
+          "section": "cloudflare_managed_content",
+          "blocked": [
+            "GPTBot",
+            "OAI-SearchBot"
+          ],
+          "user_would_allow": []
+        },
+        "content_signals": []
+      }
+    },
+    {
+      "name": "private surfaces gated on purpose",
+      "why": "`/blog/` is not a private surface; the repeated `/admin/` counts once.",
+      "status": 200,
+      "robots": "User-agent: *\nDisallow: /admin/\nDisallow: /wp-admin\nDisallow: /api/*\nDisallow: /cart\nDisallow: /blog/\n\nUser-agent: *\nDisallow: /admin/\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open_with_gating",
+          "params": {
+            "count": 4
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [
+          [
+            "admin",
+            "/admin/"
+          ],
+          [
+            "admin",
+            "/wp-admin"
+          ],
+          [
+            "api",
+            "/api/*"
+          ],
+          [
+            "checkout",
+            "/cart"
+          ]
+        ],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "a store locator is not a private surface",
+      "why": "/stores is a public page on many retail sites, so blocking it is not credited as gating; /admin still is.",
+      "status": 200,
+      "robots": "User-agent: *\nDisallow: /stores/\nDisallow: /admin/\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open_with_gating",
+          "params": {
+            "count": 1
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [
+          [
+            "admin",
+            "/admin/"
+          ]
+        ],
+        "managed_block": null,
+        "content_signals": []
+      }
+    },
+    {
+      "name": "Content-Signal is reported per group",
+      "why": "A Content-Signal with no key=value pair declares nothing.",
+      "status": 200,
+      "robots": "User-agent: *\nContent-Signal: search=yes, ai-train=no\nAllow: /\n\nUser-agent: GPTBot\nContent-Signal: nothing-here\nDisallow: /private/\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [
+          "GPTBot"
+        ],
+        "score": 100,
+        "advisory": {
+          "key": "training_bots_gated",
+          "params": {
+            "bots": "GPTBot"
+          }
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": [
+          {
+            "user_agents": [
+              "*"
+            ],
+            "signals": {
+              "search": "yes",
+              "ai-train": "no"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown bots in the file change nothing",
+      "status": 200,
+      "robots": "User-agent: SomeOtherBot\nDisallow: /\n",
+      "expected": {
+        "blocked": [],
+        "allowed": [],
+        "score": 100,
+        "advisory": {
+          "key": "fully_open",
+          "params": {}
+        },
+        "snippet_bots": [],
+        "intentional_gating": [],
+        "managed_block": null,
+        "content_signals": []
+      }
+    }
+  ]
+}
