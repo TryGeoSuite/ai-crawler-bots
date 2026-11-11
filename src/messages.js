@@ -24,6 +24,8 @@ export const ADVISORY_MESSAGES = {
     fully_open_with_gating:
       'Every AI bot can read your site, and {count} private areas (admin, login, cart and similar) stay closed: that is correct.',
     fully_open: 'Every AI bot can read your site.',
+    robots_server_error:
+      'Your robots.txt answers HTTP {status}: while the error lasts, bots that follow the standard read no page of the site, and AI answers cannot cite you. If it keeps happening, fix it on the server.',
   },
   it: {
     answer_bots_blocked:
@@ -39,6 +41,8 @@ export const ADVISORY_MESSAGES = {
     fully_open_with_gating:
       'Tutti i bot AI possono leggere il tuo sito, e {count} aree private (admin, login, carrello e simili) restano chiuse: è corretto.',
     fully_open: 'Tutti i bot AI possono leggere il tuo sito.',
+    robots_server_error:
+      "Il robots.txt risponde HTTP {status}: finché l'errore dura, i bot che rispettano lo standard non leggono nessuna pagina del sito, e le risposte AI non possono citarti. Se si ripete, va sistemato sul server.",
   },
 };
 

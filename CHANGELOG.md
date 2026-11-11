@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Changed
+
+- A robots.txt that answers a 5xx no longer reads as fully open: per RFC 9309
+  2.3.1.4 a compliant crawler reads nothing while the error lasts, so the score
+  is 0, the fix snippet is empty and the advisory is `robots_server_error`
+  (`{ status }`). The bots stay not specified.
+
 ### Added
 
 - Claude-SearchBot and Claude-User (Anthropic).

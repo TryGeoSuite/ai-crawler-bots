@@ -328,7 +328,7 @@ ${BASE_CSS}
   }
 
   var ADVICE_TONE = { fully_open: 'good', fully_open_with_gating: 'good', training_bots_gated: 'good',
-    answer_bots_blocked: 'warn', managed_overrides_user_intent: 'warn' };
+    answer_bots_blocked: 'warn', managed_overrides_user_intent: 'warn', robots_server_error: 'warn' };
   var ADVICE_ICON = { good: ['ok', ICONS.ok], warn: ['', ICONS.warn], info: ['partial', ICONS.partial] };
   function advice(a){
     var text = a && ADVICE[a.key];
