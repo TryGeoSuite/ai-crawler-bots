@@ -529,12 +529,24 @@ export function analyzeRobots({ origin, robotsUrl = '', status = 0, body = '', b
       sourceLabel: g.sourceLabel,
     }));
 
-  const advisory = buildAdvisory({
+  let advisory = buildAdvisory({
     blocked,
     managedBlock,
     intentionalGating: gating,
     trainingGated: trainingBotsGated(groups, bots),
   });
+  let finalScore = score;
+  let snippet = allowlistSnippet(blocked);
+  if (status >= 500 && status < 600) {
+    // RFC 9309 2.3.1.4: a robots.txt the server fails to serve means a
+    // compliant crawler reads nothing, so the site is closed to every bot
+    // while the error lasts. The bots stay "not specified" (no rule names
+    // them, and one 5xx may pass: Google retries and falls back on its last
+    // good copy) but the score and the advice say it.
+    finalScore = 0;
+    snippet = '';
+    advisory = { key: 'robots_server_error', params: { status } };
+  }
 
   return {
     url: origin,
@@ -544,8 +556,8 @@ export function analyzeRobots({ origin, robotsUrl = '', status = 0, body = '', b
     blockedBots: blocked,
     allowedBots: allowed,
     notSpecifiedBots: notSpecified,
-    score,
-    suggestedAllowlist: allowlistSnippet(blocked),
+    score: finalScore,
+    suggestedAllowlist: snippet,
     advisory,
     intentionalGating: gating,
     managedBlock,

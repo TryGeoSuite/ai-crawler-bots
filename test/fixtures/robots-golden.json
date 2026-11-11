@@ -153,16 +153,18 @@
     },
     {
       "name": "server error with a body",
-      "why": "A 5xx body is not a robots.txt: it is ignored.",
+      "why": "A 5xx body is not a robots.txt: it is ignored, and a compliant crawler reads nothing while the error lasts (RFC 9309 2.3.1.4).",
       "status": 500,
       "robots": "User-agent: *\nDisallow: /\n",
       "expected": {
         "blocked": [],
         "allowed": [],
-        "score": 100,
+        "score": 0,
         "advisory": {
-          "key": "fully_open",
-          "params": {}
+          "key": "robots_server_error",
+          "params": {
+            "status": 500
+          }
         },
         "snippet_bots": [],
         "intentional_gating": [],
