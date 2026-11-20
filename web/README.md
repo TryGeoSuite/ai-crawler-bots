@@ -12,7 +12,10 @@ CLI (`analyzeRobots()` + the bundled `bots.json`) — just reachable from a brow
 - `GET /api/check?url=https://example.com`: JSON verdict, with score, bots by bucket, `advisory` (`{ key, params }`) and `suggestedAllowlist` (the lines that re-open the blocked answer bots)
 - `GET /bots` — the full curated bot list as JSON; `GET /bots/<id>` — a single bot (a free public API over `bots.json`)
 
-No database, no secrets, no tracking. It fetches only the target's `/robots.txt`.
+No database, no secrets, no cookies. It fetches only the target's `/robots.txt`.
+Anonymous usage statistics go to PostHog (EU) in cookieless mode (`analytics()`
+in `theme.js`): the tool, the hostname of the site checked and the outcome,
+never the full URL.
 
 ## Run locally
 

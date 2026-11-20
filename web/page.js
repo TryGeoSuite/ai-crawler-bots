@@ -9,7 +9,7 @@
 // tools.trygeosuite.it. CSS and JS are inline; the only outside request is the
 // Inter font from Google Fonts, and the engine logos come from this worker.
 
-import { FONTS, BASE_CSS, ENGINES } from './theme.js';
+import { FONTS, BASE_CSS, ENGINES, analytics, withSiteUtm } from './theme.js';
 import { ADVISORY_MESSAGES } from '../src/messages.js';
 
 const BASE = 'https://ai-crawl-check.geosuite.workers.dev';
@@ -18,6 +18,11 @@ const REPO = 'https://github.com/TryGeoSuite/ai-crawler-bots';
 const NPM = 'https://www.npmjs.com/package/@geosuite/ai-crawler-bots';
 const ANALYSIS = 'https://trygeosuite.it/analisi-gratuita?utm_source=geosuite-open&utm_medium=tool&utm_campaign=ai-crawl-check';
 const CMD = 'npx @geosuite/ai-crawler-bots robots &lt;url&gt;';
+// The tool id in the usage statistics (theme.js analytics).
+const TOOL = 'ai_crawler_bots';
+// The campaign name the existing signup links already use: one name per tool
+// keeps a per-campaign report on one row.
+const CAMPAIGN = 'ai-crawl-check';
 
 // Status icons, the same marks as the AI Readiness Check (geo-toolkit/check-page.js).
 // The circle takes the state color from CSS; the label next to it always says it.
@@ -43,7 +48,7 @@ const S = {
     placeholder: 'yoursite.com',
     check: 'Check',
     facts: ['Free', 'No sign-up', 'Open source (MIT)'],
-    hint: `No login, no tracking. We fetch only <code>/robots.txt</code>, nothing else.`,
+    hint: `No login, no cookies. We fetch only <code>/robots.txt</code>, and the anonymous usage statistics (PostHog, EU) see only the site’s hostname.`,
     legendHead: 'How to read the result',
     legend: [
       ['ok', 'Allowed', 'a rule in your robots.txt names this bot and lets it in.'],
@@ -95,7 +100,7 @@ const S = {
     placeholder: 'tuosito.it',
     check: 'Controlla',
     facts: ['Gratis', 'Senza registrazione', 'Open source (MIT)'],
-    hint: `Niente login, niente tracciamento. Leggiamo solo <code>/robots.txt</code>, nient'altro.`,
+    hint: `Niente login, niente cookie. Leggiamo solo <code>/robots.txt</code>, e le statistiche d’uso anonime (PostHog, UE) vedono solo il nome del sito.`,
     legendHead: 'Come leggere il risultato',
     legend: [
       ['ok', 'Permesso', 'una regola del tuo robots.txt nomina questo bot e lo fa entrare.'],
@@ -143,7 +148,7 @@ export function renderPage(lang) {
     .map(([k, name, text]) => `<li class="${k}">${ICONS[k]}<span><strong>${name}</strong>: ${text}</span></li>`)
     .join('');
 
-  return `<!doctype html>
+  return withSiteUtm(`<!doctype html>
 <html lang="${lang}">
 <head>
 <meta charset="utf-8">
@@ -170,6 +175,7 @@ export function renderPage(lang) {
 <meta name="twitter:description" content="${t.ogDesc}">
 <meta name="twitter:image" content="${BASE}/og.png">
 ${FONTS}
+${analytics(TOOL)}
 <style>
 ${BASE_CSS}
   code { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.875em; }
@@ -300,7 +306,7 @@ ${BASE_CSS}
         <p>${t.ctaText}</p>
         ${ENGINES}
       </div>
-      <a class="primary" href="${ANALYSIS}" target="_blank" rel="noopener">${t.ctaButton}</a>
+      <a class="primary" href="${ANALYSIS}" target="_blank" rel="noopener" data-cta="analysis">${t.ctaButton}</a>
     </section>
   </main>
 
@@ -312,6 +318,17 @@ ${BASE_CSS}
   var out = document.getElementById('out');
   var input = document.getElementById('u');
   var btn = document.getElementById('go');
+
+  // Usage statistics (theme.js analytics): never throws, never sends the URL.
+  function track(event, props){ try { if (window.gsTrack) window.gsTrack(event, props); } catch (e) {} }
+  function hostOf(url){ return window.gsTrack ? window.gsTrack.host(url) : ''; }
+  // The API's error is a sentence that can quote the URL: send a code instead.
+  function errCode(msg){
+    msg = String(msg || '');
+    return /invalid url/i.test(msg) ? 'invalid_url' : /missing/i.test(msg) ? 'missing_url'
+      : /protocol/i.test(msg) ? 'unsupported_protocol' : /redirect/i.test(msg) ? 'too_many_redirects'
+      : /time ?out|timed out|abort/i.test(msg) ? 'timeout' : 'fetch_failed';
+  }
 
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -339,12 +356,14 @@ ${BASE_CSS}
     return '<div class="advice ' + t + ' ' + ADVICE_ICON[t][0] + '">' + ADVICE_ICON[t][1] + '<span>' + esc(text) + '</span></div>';
   }
 
-  function addCopy(box, text){
+  // what: which text the button copies, for the usage statistics.
+  function addCopy(box, text, what){
     if (!navigator.clipboard) return;
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'ghost'; b.textContent = COPY.copy; b.setAttribute('aria-label', COPY.label);
     b.addEventListener('click', function () {
       navigator.clipboard.writeText(text).then(function () {
+        track('tool_result_copied', { content: what });
         b.textContent = COPY.copied;
         setTimeout(function () { b.textContent = COPY.copy; }, 1200);
       }).catch(function () {});
@@ -393,35 +412,52 @@ ${BASE_CSS}
         snippet +
       '</section>';
     var box = out.querySelector('.snippet .cmd');
-    if (box) addCopy(box, r.suggestedAllowlist);
+    if (box) addCopy(box, r.suggestedAllowlist, 'allowlist_snippet');
   }
 
-  function run(url){
+  // source: 'form' (submitted) or 'shared_link' (a ?url= link re-runs it).
+  function run(url, source){
     if (!url) return;
+    var t0 = Date.now(), inputHost = hostOf(url);
+    track('tool_run_started', { input_host: inputHost, source: source });
     btn.disabled = true;
     out.innerHTML = '<div class="panel loading">' + I18N.reading + esc(url) + I18N.robotsSuffix + '</div>';
     fetch('/api/check?url=' + encodeURIComponent(url))
       .then(function(res){ return res.json(); })
-      .then(function(r){ render(r); })
-      .catch(function(){ fail(I18N.networkError); })
+      .then(function(r){
+        if (r.error && !r.score && r.score !== 0) {
+          track('tool_run_failed', { input_host: inputHost, error: errCode(r.error), duration_ms: Date.now() - t0 });
+        } else {
+          track('tool_run_completed', {
+            input_host: inputHost, duration_ms: Date.now() - t0, score: r.score,
+            blocked: (r.blocked || []).length, allowed: (r.allowed || []).length, not_set: (r.notSpecified || []).length,
+            advisory: r.advisory ? r.advisory.key : null,
+          });
+        }
+        render(r);
+      })
+      .catch(function(){
+        track('tool_run_failed', { input_host: inputHost, error: 'network', duration_ms: Date.now() - t0 });
+        fail(I18N.networkError);
+      })
       .finally(function(){ btn.disabled = false; });
   }
 
   document.getElementById('f').addEventListener('submit', function(e){
     e.preventDefault();
     var url = input.value.trim();
-    if (url){ history.replaceState(null, '', '?url=' + encodeURIComponent(url)); run(url); }
+    if (url){ history.replaceState(null, '', '?url=' + encodeURIComponent(url)); run(url, 'form'); }
   });
 
   // Auto-run from a shared ?url= link.
   var shared = new URLSearchParams(location.search).get('url');
-  if (shared){ input.value = shared; run(shared); }
+  if (shared){ input.value = shared; run(shared, 'shared_link'); }
 
   // A copy button on each command box, when the browser allows it.
   document.querySelectorAll('.cmd').forEach(function (box) {
-    addCopy(box, box.querySelector('code').textContent.trim());
+    addCopy(box, box.querySelector('code').textContent.trim(), 'cli_command');
   });
 </script>
 </body>
-</html>`;
+</html>`, CAMPAIGN);
 }
