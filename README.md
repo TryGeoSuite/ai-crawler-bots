@@ -17,7 +17,7 @@ One curated, operator-sourced list of AI crawler & training-bot user agents — 
 
 ### ▶ [Try it live](https://ai-crawl-check.geosuite.workers.dev) — paste any URL, no install
 
-No login, no tracking: it fetches only the target's `robots.txt` and scores it against every known AI bot. Or run it yourself:
+No login, no cookies: it fetches only the target's `robots.txt` and scores it against every known AI bot (anonymous usage statistics with PostHog, EU, see only the site's hostname). Or run it yourself:
 
 ```bash
 # No install required — audit any site against every known AI bot:
